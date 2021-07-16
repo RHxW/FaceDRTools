@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 import copy
 
+from utils.model_loading import load_model
 from FaceDet.retinaface import RetinaFace
 from FaceDet.faceAlign import alignFace
 from FaceDet.config import cfg_re50, cfg_mnet
@@ -30,7 +31,9 @@ class FDAPI():
         self.device = cfg.det_device
         self.net = RetinaFace(cfg=self.det_cfg, phase="test").to(self.device)
 
-        self.net.load_state_dict(torch.load(cfg.det_checkpoint_path, map_location=self.device))
+        if not os.path.exists(cfg.det_checkpoint_path):
+            raise RuntimeError("det checkpoint path does not exist!!!")
+        self.net = load_model(self.net, cfg.det_checkpoint_path, self.device)
         self.net.eval()
 
         self.RGB_MEAN = np.array([0.5507809, 0.4314252, 0.37640554], dtype=np.float32)
@@ -42,7 +45,7 @@ class FDAPI():
         :return: padding图像， resize图像， resize比例
         '''
         # padding & resize to infer_size
-        dst_w, dst_h = self.cfg.infer_size
+        dst_w, dst_h = self.cfg.det_infer_size
         if dst_w == -1:
             return image, image, 1, [1, 1]
 
@@ -200,10 +203,7 @@ class FDAPI():
 
         return image
 
-    def detect(self, img_path):
-        if not os.path.exists(img_path):
-            return
-        image = cv2.imread(img_path, cv2.IMREAD_COLOR)
+    def detect(self, image):
         # 图像右下方用黑色padding，再resize 到infer_size
         img_pad, img_infer, infer_ratio, d_wh = self.img_padding(image)
 
@@ -213,24 +213,44 @@ class FDAPI():
         kpts_src = [x - d_wh for x in kpts_src]
         fbox = [[x[0] - d_wh[0], x[1] - d_wh[1], x[2] - d_wh[0], x[3] - d_wh[1]] for x in box]
 
-        # return img_det, kpts, box, text, kpts_src
+        return img_det, kpts, fbox, text, kpts_src
+
+    def save_det(self, img_path, save_dir, show_kpts=False):
+        if not os.path.exists(img_path):
+            return
+        image = cv2.imread(img_path, cv2.IMREAD_COLOR)
+        det_res = self.detect(image)
+        if not det_res:
+            return
+        img_det, kpts, fbox, text, kpts_src = det_res
+
         img_name = img_path.split("/")[-1][:-4]
         new_name = img_name + ".jpg"
-        if self.cfg.save_det:
-            img_draw = copy.deepcopy(image)
-            det_path = os.path.join(self.cfg.det_save_root, new_name)
-            for lms, box, txt in zip(kpts, fbox, text):
-                img_draw = self.draw_box(img_draw, lms, box, txt, show_kpts=False)
-            cv2.imwrite(det_path, img_draw)
 
-        if self.cfg.save_align:
-            for ind, (img_d, lms) in enumerate(zip(img_det, kpts)):
-                if ind > 0:
-                    continue
-                _h, _w, _c = img_d.shape
-                if min(_h, _w) <= 26:
-                    continue
-                aligned_face = alignFace(img_d, lms, self.cfg.aligned_size, scale=self.cfg.aligned_scale)
-                align_path = os.path.join(self.cfg.align_save_root, new_name)
-                cv2.imwrite(align_path, aligned_face)
-        return new_name
+        img_draw = copy.deepcopy(image)
+        det_path = os.path.join(save_dir, new_name)
+        for lms, box, txt in zip(kpts, fbox, text):
+            img_draw = self.draw_box(img_draw, lms, box, txt, show_kpts=show_kpts)
+        cv2.imwrite(det_path, img_draw)
+
+    def save_align(self, img_path, save_dir, min_size=26):
+        if not os.path.exists(img_path):
+            return
+        image = cv2.imread(img_path, cv2.IMREAD_COLOR)
+        det_res = self.detect(image)
+        if not det_res:
+            return
+        img_det, kpts, fbox, text, kpts_src = det_res
+
+        img_name = img_path.split("/")[-1][:-4]
+        new_name = img_name + ".jpg"
+
+        for ind, (img_d, lms) in enumerate(zip(img_det, kpts)):
+            if ind > 0:
+                continue
+            _h, _w, _c = img_d.shape
+            if min(_h, _w) <= min_size:
+                continue
+            aligned_face = alignFace(img_d, lms, self.cfg.aligned_size, scale=self.cfg.aligned_scale)
+            align_path = os.path.join(save_dir, new_name)
+            cv2.imwrite(align_path, aligned_face)
