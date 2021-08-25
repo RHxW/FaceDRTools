@@ -47,7 +47,7 @@ class FDAPI():
         # padding & resize to infer_size
         dst_w, dst_h = self.cfg.det_infer_size
         if dst_w == -1:
-            return image, image, 1, [1, 1]
+            return image, image, 1, [0, 0]
 
         img_h, img_w = image.shape[:2]
         max_side = max(img_w, img_h)
@@ -85,7 +85,7 @@ class FDAPI():
     def get_box(self, image, img_pad, img_infer, r_ratio):
         '''
         :param image: 原始图像， 用于裁剪检测图
-        :param img_pad: pad图，用于1.5倍扩充
+        :param img_pad: pad图，用于`box_scale`倍扩充
         :param img_infer: 128*128， 传入net
         :param r_ratio: resize比例，用于结果回退到原图
         :return: 检测图，以及对应的 检测坐标，关键点，置信度
@@ -171,7 +171,7 @@ class FDAPI():
             fbox = scaledBox(b, img_pad, scale=self.cfg.box_scale)
             if self.cfg.use_box_scale:
                 x1, y1, x2, y2 = fbox
-                kpts -= [x1, y1]
+                # kpts -= [x1, y1]  # 去掉了就好了，不然会跑偏
                 al_image = copy.deepcopy(img_pad[y1:y2, x1:x2, :])  # ~~~
                 # if x2 - x1 < img_w // 2 or y2 - y1 < img_h // 2:
                 #     continue
@@ -204,7 +204,7 @@ class FDAPI():
         return image
 
     def detect(self, image):
-        # 图像右下方用黑色padding，再resize 到infer_size
+        # 图像右下方用黑色padding，再resize到infer_size
         img_pad, img_infer, infer_ratio, d_wh = self.img_padding(image)
 
         # 检测人脸
@@ -216,6 +216,13 @@ class FDAPI():
         return img_det, kpts, fbox, text, kpts_src
 
     def save_det(self, img_path, save_dir, show_kpts=False):
+        """
+        保存检测后的人脸图片（按box裁切）
+        :param img_path:
+        :param save_dir:
+        :param show_kpts:
+        :return:
+        """
         if not os.path.exists(img_path):
             return
         image = cv2.imread(img_path, cv2.IMREAD_COLOR)
@@ -234,10 +241,17 @@ class FDAPI():
         cv2.imwrite(det_path, img_draw)
 
     def save_align(self, img_path, save_dir, min_size=26):
+        """
+        保存对齐后的人脸图片
+        :param img_path:
+        :param save_dir:
+        :param min_size:
+        :return:
+        """
         if not os.path.exists(img_path):
             return
         image = cv2.imread(img_path, cv2.IMREAD_COLOR)
-        det_res = self.detect(image)
+        det_res = self.detect(image)  # img_det, kpts, fbox, text, kpts_src
         if not det_res:
             return
         img_det, kpts, fbox, text, kpts_src = det_res
@@ -254,3 +268,82 @@ class FDAPI():
             aligned_face = alignFace(img_d, lms, self.cfg.aligned_size, scale=self.cfg.aligned_scale)
             align_path = os.path.join(save_dir, new_name)
             cv2.imwrite(align_path, aligned_face)
+
+    def save_annotations(self, img_path, save_file):
+        """
+        保存检测得到的box和landmarks到txt文件，内容为（每行）：
+        "img_path$box_coor|lmks_coor$box_coor|lmks_coor$...$box_coor|lmks_coor\n"
+        :param img_path:
+        :param save_file: txt文件，如果存在则覆盖
+        :return:
+        """
+        if not os.path.exists(img_path):
+            return False
+        image = cv2.imread(img_path, cv2.IMREAD_COLOR)
+        det_res = self.detect(image)  # img_det, kpts, fbox, text, kpts_src
+        if not det_res:
+            return False
+        img_det, kpts, fbox, text, kpts_src = det_res
+
+        with open(save_file, "w") as f:
+            ln = "%s$" % img_path
+            for box, kpt in zip(fbox, kpts):
+                anno = ""
+                for bc in box:
+                    anno += str(bc) + " "
+                anno = anno[:-1]
+                anno += "|"
+                for kc in kpt:
+                    anno += "%d %d " % (int(kc[0]), int(kc[1]))
+                anno = anno[:-1]
+                anno += "$"
+            anno = anno[:-1]
+            anno += "\n"
+            ln += anno
+            f.write(ln)
+
+        return True
+
+    def save_annotations_batch(self, img_paths, save_file):
+        """
+        保存检测得到的box和landmarks到txt文件，内容为（每行）：
+        "img_path$box_coor|lmks_coor$box_coor|lmks_coor$...$box_coor|lmks_coor\n"
+        :param img_paths: list of img paths
+        :param save_file: txt文件，如果存在则覆盖
+        :return:
+        """
+        if not isinstance(img_paths, list):
+            return False
+
+        with open(save_file, "w") as f:
+            lns = []
+            for img_path in img_paths:
+                if not os.path.exists(img_path):
+                    print("img_path: %s does not exist!" % img_path)
+                    continue
+                image = cv2.imread(img_path, cv2.IMREAD_COLOR)
+                det_res = self.detect(image)  # img_det, kpts, fbox, text, kpts_src
+                if not det_res:
+                    print("img_path: %s fail detected!" % img_path)
+                    continue
+                img_det, kpts, fbox, text, kpts_src = det_res
+
+                ln = "%s$" % img_path
+                for box, kpt in zip(fbox, kpts):
+                    anno = ""
+                    for bc in box:
+                        anno += str(bc) + " "
+                    anno = anno[:-1]
+                    anno += "|"
+                    for kc in kpt:
+                        anno += "%d %d " % (int(kc[0]), int(kc[1]))
+                    anno = anno[:-1]
+                    anno += "$"
+                anno = anno[:-1]
+                anno += "\n"
+                ln += anno
+                lns.append(ln)
+
+            f.writelines(lns)
+
+        return True
