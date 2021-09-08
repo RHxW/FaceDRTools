@@ -7,7 +7,7 @@ import copy
 
 from utils.model_loading import load_model
 from FaceDet.retinaface import RetinaFace
-from FaceDet.faceAlign import alignFace
+from FaceDet.faceAlign import warp_im, alignFace
 from FaceDet.config import cfg_re50, cfg_mnet
 from FaceDet.utils.py_cpu_nms import py_cpu_nms
 from FaceDet.utils.box_utils import decode, decode_landm
@@ -240,6 +240,40 @@ class FDAPI():
             img_draw = self.draw_box(img_draw, lms, box, txt, show_kpts=show_kpts)
         cv2.imwrite(det_path, img_draw)
 
+    def get_align(self, img_path, min_size=26):
+        """
+        获取对齐后的人脸图片
+        :param img_path:
+        :param min_size:
+        :return:
+        """
+        if not os.path.exists(img_path):
+            return
+        image = cv2.imread(img_path, cv2.IMREAD_COLOR)
+        if image is None:
+            return
+        det_res = self.detect(image)  # img_det, kpts, fbox, text, kpts_src
+        if not det_res:
+            return
+        img_det, kpts, fbox, text, kpts_src = det_res
+
+        res = []
+
+        for ind, (img_d, box, lms) in enumerate(zip(img_det, fbox, kpts)):
+            if ind > 0:
+                continue
+
+            lms[:, 0] -= box[0]
+            lms[:, 1] -= box[1]
+
+            _h, _w, _c = img_d.shape
+            if min(_h, _w) <= min_size:
+                continue
+            # aligned_face = alignFace(img_d, lms, self.cfg.aligned_size, scale=self.cfg.aligned_scale)
+            aligned_face = warp_im(img_d, lms, self.cfg.aligned_size)
+            res.append(aligned_face)
+        return res
+
     def save_align(self, img_path, save_dir, min_size=26):
         """
         保存对齐后的人脸图片
@@ -259,13 +293,18 @@ class FDAPI():
         img_name = img_path.split("/")[-1][:-4]
         new_name = img_name + ".jpg"
 
-        for ind, (img_d, lms) in enumerate(zip(img_det, kpts)):
+        for ind, (img_d, box, lms) in enumerate(zip(img_det, fbox, kpts)):
             if ind > 0:
                 continue
+
+            lms[:, 0] -= box[0]
+            lms[:, 1] -= box[1]
+
             _h, _w, _c = img_d.shape
             if min(_h, _w) <= min_size:
                 continue
-            aligned_face = alignFace(img_d, lms, self.cfg.aligned_size, scale=self.cfg.aligned_scale)
+            # aligned_face = alignFace(img_d, lms, self.cfg.aligned_size, scale=self.cfg.aligned_scale)
+            aligned_face = warp_im(img_d, lms, self.cfg.aligned_size)
             align_path = os.path.join(save_dir, new_name)
             cv2.imwrite(align_path, aligned_face)
 

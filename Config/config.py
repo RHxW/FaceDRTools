@@ -9,10 +9,10 @@ class CONFIG():
         #                                           #
         #############################################
         self.det_backbone = "resnet"  # ["resnet", "mobile0.25"]
-        self.det_device = "cuda:0"
-        self.det_checkpoint_path = "F:/FaceDRTools/FaceDet/checkpoints/Resnet50_Final.pth"
+        self.det_device = "cuda"
+        self.det_checkpoint_path = "/FaceDet/checkpoints/Resnet50_Final.pth"
 
-        self.det_infer_size = (-1, -1)  # -1 表示原图， 不做缩放
+        self.det_infer_size = (320, 320)  # -1 表示原图， 不做缩放
         self.rgb_mean = (104, 117, 123)  # 实际图像是BGR, 这里顺序也是BGR
         self.confidence_threshold = 0.3
         self.top_k = 500
@@ -32,7 +32,7 @@ class CONFIG():
         #                                           #
         #############################################
         self.q_device = "cuda:0"
-        self.q_checkpoint_path = "F:/FaceDRTools/FaceQ/checkpoints/checkpoint.pth"
+        self.q_checkpoint_path = "/FaceQ/checkpoints/checkpoint.pth"
 
         self.q_size = (112, 96)  # H, W
 
