@@ -8,7 +8,7 @@ from GenderClassifier.config import CONFIG
 from GenderClassifier.model import GenderClsNetwork
 
 
-def test_with_gt(cfg, data_root, res_root):
+def inference(cfg, data_root, res_root):
     torch.backends.cudnn.benchmark = True
     torch.set_grad_enabled(False)
 
@@ -45,7 +45,7 @@ def test_with_gt(cfg, data_root, res_root):
 
     for i in range(N):
         img = cv2.imread(img_paths[i])
-        img = cv2.resize(img, (112, 112))
+        # img = cv2.resize(img, (112, 112))
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = (np.array(img, dtype=np.float32) / 255 - RGB_MEAN) / RGB_STD
         img = img.transpose((2, 0, 1))
@@ -75,4 +75,4 @@ if __name__ == "__main__":
     cfg = CONFIG
     data_root = "F:/gender_classifier/dataset/test_1/"
     res_root = "F:/gender_classifier/dataset/test_res/"
-    test_with_gt(cfg, data_root, res_root)
+    inference(cfg, data_root, res_root)
