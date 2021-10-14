@@ -1,4 +1,4 @@
-CONFIG = {
+GC_CONFIG = {
     "device": "cuda:0",
     "checkpoint_file": "checkpoint.pth",
     "num_workers": 0,

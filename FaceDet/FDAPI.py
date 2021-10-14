@@ -285,6 +285,8 @@ class FDAPI():
         if not os.path.exists(img_path):
             return
         image = cv2.imread(img_path, cv2.IMREAD_COLOR)
+        if image is None:
+            return
         det_res = self.detect(image)  # img_det, kpts, fbox, text, kpts_src
         if not det_res:
             return
@@ -294,7 +296,7 @@ class FDAPI():
         new_name = img_name + ".jpg"
 
         for ind, (img_d, box, lms) in enumerate(zip(img_det, fbox, kpts)):
-            if ind > 0:
+            if ind > 0:  # 只保存一张脸
                 continue
 
             lms[:, 0] -= box[0]

@@ -31,6 +31,8 @@ def img_align_2_dir(cfg, src_root, dst_root):
         imgs = os.listdir(sd_path)
         for name in imgs:
             img_path = sd_path + name
+            if os.path.exists(dst_dir + name[:-4]+'.jpg'):
+                continue
             FD.save_align(img_path, dst_dir)
 
     end_time = datetime.datetime.now()
