@@ -204,6 +204,7 @@ class FDAPI():
         return image
 
     def detect(self, image):
+        # TODO detect 中加入最小检测尺寸，过滤尺寸太小的检出人脸
         # 图像右下方用黑色padding，再resize到infer_size
         img_pad, img_infer, infer_ratio, d_wh = self.img_padding(image)
 
