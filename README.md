@@ -9,3 +9,4 @@ Face Detection and Recognition APIs
 |quality|链接：https://pan.baidu.com/s/1wQFXObQrV19MkhTLRx4fRg 提取码：70l0 |
 |recognition|链接：https://pan.baidu.com/s/1nTjZc59KkyUokEwkEoNlLg 提取码：8pbp |
 |gender classify|链接：https://pan.baidu.com/s/1eqaPRkGigmWdSaNNXPpfzQ 提取码：sjk9 |
+|Asian European classify|链接：https://pan.baidu.com/s/1yX3sPcpX47UsDqmcY3TqZw 提取码：ri06|
