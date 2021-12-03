@@ -11,7 +11,7 @@ class FRAPI():
         self.device = cfg.rec_device
         self.input_size = cfg.rec_size
         self.net = IR_SE_50(self.input_size).to(self.device)
-        self.net.load_state_dict(torch.load(cfg.rec_checkpoint_path, map_location=self.device))
+        self.net.load_state_dict(torch.load(cfg.rec_checkpoint_path, map_location=self.device)['backbone'])
         self.net.eval()
 
         torch.set_grad_enabled(False)

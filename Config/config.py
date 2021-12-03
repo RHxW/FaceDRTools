@@ -32,7 +32,7 @@ class CONFIG():
         #                                           #
         #############################################
         self.q_device = "cuda:0"
-        self.q_checkpoint_path = "/FaceQ/checkpoints/checkpoint.pth"
+        self.q_checkpoint_path = "F:/FaceDRTools/FaceQ/checkpoints/checkpoint.pth"
 
         self.q_size = (112, 96)  # H, W
 
