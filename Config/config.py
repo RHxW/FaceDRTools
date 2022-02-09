@@ -1,5 +1,7 @@
 import os
+import torch
 
+DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 class CONFIG():
     def __init__(self):
 
@@ -9,8 +11,8 @@ class CONFIG():
         #                                           #
         #############################################
         self.det_backbone = "resnet"  # ["resnet", "mobile0.25"]
-        self.det_device = "cuda"
-        self.det_checkpoint_path = "/FaceDet/checkpoints/Resnet50_Final.pth"
+        self.det_device = DEVICE
+        self.det_checkpoint_path = ""
 
         self.det_infer_size = (320, 320)  # -1 表示原图， 不做缩放
         self.rgb_mean = (104, 117, 123)  # 实际图像是BGR, 这里顺序也是BGR
@@ -31,8 +33,8 @@ class CONFIG():
         #               quality API                 #
         #                                           #
         #############################################
-        self.q_device = "cuda:0"
-        self.q_checkpoint_path = "F:/FaceDRTools/FaceQ/checkpoints/checkpoint.pth"
+        self.q_device = DEVICE
+        self.q_checkpoint_path = ""
 
         self.q_size = (112, 96)  # H, W
 
@@ -41,7 +43,7 @@ class CONFIG():
         #             recognition API               #
         #                                           #
         #############################################
-        self.rec_device = "cuda:0"
+        self.rec_device = DEVICE
         self.rec_checkpoint_path = ""
 
         self.rec_size = (112, 96)  # H, W

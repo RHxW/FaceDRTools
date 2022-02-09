@@ -203,13 +203,22 @@ class FDAPI():
 
         return image
 
-    def detect(self, image, min_siz=0):
-        # TODO detect 中加入最小检测尺寸(min_size)，过滤尺寸太小的检出人脸
+    def detect(self, image, min_size=0):
         # 图像右下方用黑色padding，再resize到infer_size
         img_pad, img_infer, infer_ratio, d_wh = self.img_padding(image)
 
         # 检测人脸
         img_det, kpts, box, text, kpts_src = self.get_box(image, img_pad, img_infer, infer_ratio)
+
+        # detect 中加入最小检测尺寸(min_size)，过滤尺寸太小的检出人脸
+        n = len(img_det)
+        for i in range(n-1, -1, -1):
+            img_d = img_det[i]
+            _h, _w, _c = img_d.shape
+            if min(_h, _w) <= min_size:
+                for ite in [img_det, kpts, box, text, kpts_src]:
+                    ite.pop(i)
+
 
         kpts_src = [x - d_wh for x in kpts_src]
         fbox = [[x[0] - d_wh[0], x[1] - d_wh[1], x[2] - d_wh[0], x[3] - d_wh[1]] for x in box]
@@ -241,19 +250,17 @@ class FDAPI():
             img_draw = self.draw_box(img_draw, lms, box, txt, show_kpts=show_kpts)
         cv2.imwrite(det_path, img_draw)
 
-    def get_align(self, img_path, min_size=26):
+    def get_align_image(self, image, min_size=26):
         """
-        获取对齐后的人脸图片
-        :param img_path:
-        :param min_size:
+        根据图片获取对齐后的人脸图片
+        :param image: 原始图片（使用cv2.imread读取的图片的numpy格式）
+        :param min_size: 检出的最小尺寸
         :return:
         """
-        if not os.path.exists(img_path):
-            return
-        image = cv2.imread(img_path, cv2.IMREAD_COLOR)
         if image is None:
             return
-        det_res = self.detect(image)  # img_det, kpts, fbox, text, kpts_src
+
+        det_res = self.detect(image, min_size)  # img_det, kpts, fbox, text, kpts_src
         if not det_res:
             return
         img_det, kpts, fbox, text, kpts_src = det_res
@@ -267,12 +274,26 @@ class FDAPI():
             lms[:, 0] -= box[0]
             lms[:, 1] -= box[1]
 
-            _h, _w, _c = img_d.shape
-            if min(_h, _w) <= min_size:
-                continue
+            # _h, _w, _c = img_d.shape
+            # if min(_h, _w) <= min_size:
+            #     continue
+
             # aligned_face = alignFace(img_d, lms, self.cfg.aligned_size, scale=self.cfg.aligned_scale)
             aligned_face = warp_im(img_d, lms, self.cfg.aligned_size)
             res.append(aligned_face)
+        return res
+
+    def get_align(self, img_path, min_size=26):
+        """
+        根据图片路径获取对齐后的人脸图片
+        :param img_path: 原始图片路径
+        :param min_size: 检出的最小尺寸
+        :return:
+        """
+        if not os.path.exists(img_path):
+            return
+        image = cv2.imread(img_path, cv2.IMREAD_COLOR)
+        res = self.get_align_image(image, min_size)
         return res
 
     def save_align(self, img_path, save_dir, min_size=26):
